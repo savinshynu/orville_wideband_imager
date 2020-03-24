@@ -1,0 +1,41 @@
+[Unit]
+Description=ADP Wideband Imager Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Run as the specified user
+User=jdowell
+
+# Allow unlimited locked memory
+LimitMEMLOCK=infinity
+
+# Have a safety net to kill off recalcitrant pipelines
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+# Run before process
+ExecStartPre=/bin/bash -c '[ -d /data/orville/log ] || mkdir -p /data/orville/log'
+
+# Setup the environment
+Environment=BIFROST_INCLUDE_PATH=/home/jdowell/orville/bifrost/src/bifrost
+Environment=LD_LIBRARY_PATH=/usr/local/cuda/lib64:/home/jdowell/orville/bifrost/lib:$LD_LIBRARY_PATH
+Environment=PYTHONPATH=/home/jdowell/orville/bifrost/python:$PYTHONPATH
+
+#Environment=LD_PRELOAD=libvma.so
+Environment=VMA_TRACELEVEL=0
+Environment=VMA_RX_POLL=1000
+Environment=VMA_INTERNAL_THREAD_AFFINITY=0
+Environment=VMA_RX_PREFETCH_BYTES=128
+Environment=VMA_THREAD_MODE=0
+Environment=VMA_MTU=9000 
+
+ExecStart=/bin/bash -ec '\
+numactl --cpunodebind=0 --membind=0 -- \
+python /home/jdowell/orville/orville_imager.py \
+         --decimation  4 \
+	 --logfile    /data/orville/log/wideband-imager.log \
+	 --output-dir /data/orville'
+
+[Install]
+WantedBy=multi-user.target
