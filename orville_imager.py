@@ -195,7 +195,7 @@ class CaptureOp(object):
             'chan0':    chan0,
             'cfreq':    chan0*25e3,
             'nchan':    nchan,
-            'bw':       nchan*25e3,
+            'bw':       nchan*4*25e3,
             'navg':     navg,
             'nstand':   int(numpy.sqrt(8*nsrc+1)-1)/2,
             'npol':     2,
@@ -350,7 +350,7 @@ class SpectraOp(object):
             self.iring.resize(igulp_size, igulp_size*10)
             
             # Setup the arrays for the frequencies and auto-correlations
-            freq = (chan0 + numpy.arange(nchan))*fC
+            freq = chan0*fC + numpy.arange(nchan)*4*fC
             autos = [i*(2*(nstand-1)+1-i)//2 + i for i in xrange(nstand)]
             
             intCount = 0
@@ -514,7 +514,7 @@ class BaselineOp(object):
             self.iring.resize(igulp_size, igulp_size*10)
             
             # Setup the arrays for the frequencies and baseline lengths
-            freq = (chan0 + numpy.arange(nchan))*fC
+            freq = chan0*fC + numpy.arange(nchan)*4*fC
             t0 = time.time()
             distname = os.path.join(BASE_PATH, 'dist_%i_%i_%i.npy' % (nbl, chan0, nchan))
             try:
@@ -639,7 +639,7 @@ class ImagingOp(object):
                 
                 # Figure out the grid size and resolution - assumes a station size of 
                 # 100 m and maximum angular extent for the sky of 130 degrees
-                min_lambda = 299792458.0 / ((chan0+nchan-1)*fC)     # m
+                min_lambda = 299792458.0 / ((chan0 + 4*nchan-1)*fC)     # m
                 rayleigh_res = 1.22 * min_lambda / 100.0 * 180/numpy.pi # deg
                 res = rayleigh_res / 4.0    # deg
                 grid_size = int(numpy.ceil(130.0 / res))    # px
@@ -681,7 +681,7 @@ class ImagingOp(object):
                     
                 # Setup the uvw coordinates and get them ready for gridding
                 t0 = time.time()
-                freq = (chan0 + numpy.arange(nchan))*fC
+                freq = chan0*fC + numpy.arange(nchan)*4*fC
                 dfreq = freq*1.0
                 dfreq.shape = (freq.size//self.decimation, self.decimation)
                 dfreq = dfreq.mean(axis=1)
@@ -1028,7 +1028,7 @@ class WriterOp(object):
             
             # Setup the frequencies
             t0 = time.time()
-            freq = chan0*fC + numpy.arange(nchan)*fC*decimation
+            freq = chan0*fC + numpy.arange(nchan)*4*fC
             print 'writer', freq[0], freq[1], freq[2]
             
             # Setup the frequencies to write images for
@@ -1384,8 +1384,8 @@ if __name__ == '__main__':
                         help='IP address to listen to')
     parser.add_argument('-p', '--port', type=int, default=11000,
                         help='UDP port to listen to')
-    parser.add_argument('-d', '--decimation', type=int, default=4,
-                        help='frequecy decimation factor')
+    parser.add_argument('-d', '--decimation', type=int, default=1,
+                        help='additional frequecy decimation factor')
     parser.add_argument('-l', '--logfile',    default=None,
                         help='Specify log file')
     parser.add_argument('-o', '--output-dir', type=str, default=os.getcwd(),
