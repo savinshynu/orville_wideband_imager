@@ -55,6 +55,9 @@ from OrvilleImageDB import OrvilleImageDB
 
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+CAL_PATH = os.path.join(BASE_PATH, 'calibration')
+if not os.path.exists(CAL_PATH):
+    os.mkdir(CAL_PATH)
 
 
 STATION = lwasv
@@ -516,7 +519,7 @@ class BaselineOp(object):
             # Setup the arrays for the frequencies and baseline lengths
             freq = chan0*fC + numpy.arange(nchan)*4*fC
             t0 = time.time()
-            distname = os.path.join(BASE_PATH, 'dist_%i_%i_%i.npy' % (nbl, chan0, nchan))
+            distname = os.path.join(CAL_PATH, 'dist_%i_%i_%i.npy' % (nbl, chan0, nchan))
             try:
                 if os.path.exists(distname) and os.path.getmtime(distname) < os.path.getmtime(__file__):
                     raise IOError
@@ -686,7 +689,7 @@ class ImagingOp(object):
                 dfreq.shape = (freq.size//self.decimation, self.decimation)
                 dfreq = dfreq.mean(axis=1)
                 print 'imager', dfreq[0], dfreq[1], dfreq[2]
-                uvwname = os.path.join(BASE_PATH, 'uvw_%i_%i_%i.npy' % (nbl, chan0, nchan))
+                uvwname = os.path.join(CAL_PATH, 'uvw_%i_%i_%i.npy' % (nbl, chan0, nchan))
                 try:
                     if os.path.exists(uvwname) and os.path.getmtime(uvwname) < os.path.getmtime(__file__):
                         raise IOError
@@ -709,7 +712,7 @@ class ImagingOp(object):
                 
                 # Setup the baselines phasing terms for zenith
                 t0 = time.time()
-                phsname = os.path.join(BASE_PATH, 'phs_%i_%i_%i.npy' % (nbl, chan0, nchan))
+                phsname = os.path.join(CAL_PATH, 'phs_%i_%i_%i.npy' % (nbl, chan0, nchan))
                 try:
                     #if os.path.exists(phsname) and os.path.getmtime(phsname) < os.path.getmtime(__file__):
                     #    raise IOError
