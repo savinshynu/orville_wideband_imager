@@ -1082,8 +1082,8 @@ class WriterOp(object):
             t0 = time.time()
             freq = chan0*fC + numpy.arange(nchan)*4*fC
             arc_freq = freq*1.0
-            arc_freq = afreq.reshape(6, -1)
-            arc_freq = afreq.mean(axis=1)
+            arc_freq = arc_freq.reshape(6, -1)
+            arc_freq = arc_freq.mean(axis=1)
             
             # Setup the frequencies to write images for
             ichans = range(nchan//2//6, nchan, nchan//6)
@@ -1198,7 +1198,7 @@ class WriterOp(object):
                     
                     self.log.debug("Wrote LWATV %i, %i to disk as '%s'", intCount, c, os.path.basename(outname))
                     
-                time_tag += navg * (int(fS) //f 100)
+                time_tag += navg * (int(fS) // 100)
                 intCount += 1
                 
                 curr_time = time.time()
