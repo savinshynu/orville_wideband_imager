@@ -24,9 +24,11 @@ from collections import deque
 from scipy.special import pro_ang1, iv
 from scipy.stats import scoreatpercentile as percentile
 
-from lsl.common.constants import c as speedOfLight
-from lsl.common.stations import lwasv, parseSSMIF
-from lsl.correlator import uvUtils
+from astropy.constants import c as speedOfLight
+speedOfLight = speedOfLight.to('m/s').value
+
+from lsl.common.stations import lwasv, parse_ssmif
+from lsl.correlator import uvutil
 from lsl.imaging import utils
 from lsl.common.adp import fS, fC
 from lsl.astro import MJD_OFFSET, DJD_OFFSET
@@ -63,7 +65,7 @@ if not os.path.exists(CAL_PATH):
 
 
 STATION = lwasv
-ANTENNAS = STATION.getAntennas()
+ANTENNAS = STATION.antennas
 
 
 W_STEP = 0.1
@@ -333,7 +335,7 @@ class SpectraOp(object):
                                   'ngpu': 1,
                                   'gpu0': BFGetGPU(),})
         
-        status = [ant.getStatus() for ant in ANTENNAS]
+        status = [ant.combined_status for ant in ANTENNAS]
         
         for iseq in self.iring.read(guarantee=True):
             ihdr = json.loads(iseq.header.tostring())
@@ -528,8 +530,8 @@ class BaselineOp(object):
                 dist = numpy.load(distname)
             except IOError:
                 print('dist cache failed')
-                uvw = uvUtils.computeUVW(ANTENNAS[0::2], HA=0, dec=self.station.lat*180/numpy.pi,
-                                            freq=freq[0], site=self.station.getObserver(), IncludeAuto=True)
+                uvw = uvutil.compute_uvw(ANTENNAS[0::2], HA=0, dec=self.station.lat*180/numpy.pi,
+                                            freq=freq[0], site=self.station.get_observer(), include_auto=True)
                 print('uvw.shape', uvw.shape)
                 dist = numpy.sqrt(uvw[:,0,0]**2 + uvw[:,1,0]**2)
                 numpy.save(distname, dist)
@@ -698,8 +700,8 @@ class ImagingOp(object):
                 except IOError:
                     print('uvw cache failed')
                     uvw = numpy.zeros((3,nchan,nstand,nstand,1,1), dtype=numpy.float32)
-                    uvwT = uvUtils.computeUVW(ANTENNAS[0::2], HA=self.phase_center_ha*12/numpy.pi, dec=self.phase_center_dec*180/numpy.pi,
-                                              freq=freq, site=self.station.getObserver(), IncludeAuto=True).transpose(1,2,0)
+                    uvwT = uvutil.compute_uvw(ANTENNAS[0::2], HA=self.phase_center_ha*12/numpy.pi, dec=self.phase_center_dec*180/numpy.pi,
+                                              freq=freq, site=self.station.get_observer(), include_auto=True).transpose(1,2,0)
                     uvwT.shape += (1,1)
                     k = 0
                     for i in xrange(nstand):
@@ -734,7 +736,7 @@ class ImagingOp(object):
                         gainY0 = a.cable.gain(freq)
                         cgainY0 = numpy.exp(2j*numpy.pi*freq*delayY0) / numpy.sqrt(gainY0)
                         ## Goodness check
-                        if ANTENNAS[2*i + 0].getStatus() != 33 or ANTENNAS[2*i + 1].getStatus() != 33:
+                        if ANTENNAS[2*i + 0].combined_status != 33 or ANTENNAS[2*i + 1].combined_status != 33:
                             cgainX0 *= 0.0
                             cgainY0 *= 0.0
                             
@@ -750,7 +752,7 @@ class ImagingOp(object):
                             gainY1 = a.cable.gain(freq)
                             cgainY1 = numpy.exp(2j*numpy.pi*freq*delayY1) / numpy.sqrt(gainY1)
                             ## Goodness check
-                            if ANTENNAS[2*j + 0].getStatus() != 33 or ANTENNAS[2*j + 1].getStatus() != 33:
+                            if ANTENNAS[2*j + 0].combined_status != 33 or ANTENNAS[2*j + 1].combined_status != 33:
                                 cgainX1 *= 0.0
                                 cgainY1 *= 0.0
                                 
@@ -773,9 +775,9 @@ class ImagingOp(object):
                 weights = numpy.ones((nchan,nstand,nstand,npol,npol), dtype=numpy.complex64)
                 for i in xrange(nstand):
                     # Mask out bad antennas
-                    if ANTENNAS[2*i+0].getStatus() != 33 or ANTENNAS[2*i+1].getStatus() != 33:
+                    if ANTENNAS[2*i+0].combined_status != 33 or ANTENNAS[2*i+1].combined_status != 33:
                         weights[:,i,:,:,:] = 0.0
-                    if ANTENNAS[2*i+0].getStatus() != 33 or ANTENNAS[2*i+1].getStatus() != 33:
+                    if ANTENNAS[2*i+0].combined_status != 33 or ANTENNAS[2*i+1].combined_status != 33:
                         weights[:,:,i,:,:] = 0.0
                         
                     for j in xrange(nstand):
