@@ -28,7 +28,7 @@ from astropy.constants import c as speedOfLight
 speedOfLight = speedOfLight.to('m/s').value
 
 from lsl.common.stations import lwasv, parse_ssmif
-from lsl.correlator import uvutil
+from lsl.correlator import uvutils
 from lsl.imaging import utils
 from lsl.common.adp import fS, fC
 from lsl.astro import MJD_OFFSET, DJD_OFFSET
@@ -530,7 +530,7 @@ class BaselineOp(object):
                 dist = numpy.load(distname)
             except IOError:
                 print('dist cache failed')
-                uvw = uvutil.compute_uvw(ANTENNAS[0::2], HA=0, dec=self.station.lat*180/numpy.pi,
+                uvw = uvutils.compute_uvw(ANTENNAS[0::2], HA=0, dec=self.station.lat*180/numpy.pi,
                                             freq=freq[0], site=self.station.get_observer(), include_auto=True)
                 print('uvw.shape', uvw.shape)
                 dist = numpy.sqrt(uvw[:,0,0]**2 + uvw[:,1,0]**2)
@@ -700,7 +700,7 @@ class ImagingOp(object):
                 except IOError:
                     print('uvw cache failed')
                     uvw = numpy.zeros((3,nchan,nstand,nstand,1,1), dtype=numpy.float32)
-                    uvwT = uvutil.compute_uvw(ANTENNAS[0::2], HA=self.phase_center_ha*12/numpy.pi, dec=self.phase_center_dec*180/numpy.pi,
+                    uvwT = uvutils.compute_uvw(ANTENNAS[0::2], HA=self.phase_center_ha*12/numpy.pi, dec=self.phase_center_dec*180/numpy.pi,
                                               freq=freq, site=self.station.get_observer(), include_auto=True).transpose(1,2,0)
                     uvwT.shape += (1,1)
                     k = 0
