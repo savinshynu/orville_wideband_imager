@@ -1030,11 +1030,12 @@ class WriterOp(object):
         ## Create
         fig = plt.Figure(figsize=(5*2, 5*(400.3/390)),
                          facecolor='black')
-        ax = [fig.add_axes((i/2.0, 0, 1.0/2.0, 1.005), axisbg='black') for i in xrange(2)]
+        ax = [fig.add_axes((i/2.0, 0, 1.0/2.0, 1.005), facecolor='black') for i in xrange(2)]
         ax[0].set_axis_off()
         ax[1].set_axis_off()
         ## Logo-ize
         logo = PIL.Image.open(os.path.join(BASE_PATH, 'logo.png'))
+        logo = logo.convert('RGB')
         lax = fig.add_axes([0.01, 0, 0.12, 0.10], frameon=False)
         lax.set_axis_off()
         lax.imshow(logo, origin='upper')
