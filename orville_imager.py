@@ -766,7 +766,7 @@ class ImagingOp(object):
                 kernel = numpy.zeros((SUPPORT_SIZE*SUPPORT_OVERSAMPLE,), dtype=numpy.complex64)
                 kx = numpy.arange(-(SUPPORT_SIZE*SUPPORT_OVERSAMPLE)/2+1, (SUPPORT_SIZE*SUPPORT_OVERSAMPLE)/2+1, 
                                   dtype=numpy.float32) / SUPPORT_OVERSAMPLE
-                kernel = numpy.sinc(2*kx/SUPPORT_SIZE) * iv(0, 8.6*numpy.sqrt(1-(2*numpy.abs(kx)/SUPPORT_SIZE)**2)) / iv(0, 8.6)
+                kernel = numpy.sinc(kx) * iv(0, 8.6*numpy.sqrt(1-(2*numpy.abs(kx)/SUPPORT_SIZE)**2)) / iv(0, 8.6)
                 
                 t0 = time.time()
                 weights = numpy.ones((nchan,nstand,nstand,npol,npol), dtype=numpy.complex64)
