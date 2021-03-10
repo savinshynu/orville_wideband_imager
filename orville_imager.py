@@ -1035,10 +1035,10 @@ class WriterOp(object):
         ax[1].set_axis_off()
         ## Logo-ize
         logo = PIL.Image.open(os.path.join(BASE_PATH, 'logo.png'))
-        logo = logo.convert('RGB')
+        logo = logo.getchannel('A')
         lax = fig.add_axes([0.01, 0, 0.12, 0.10], frameon=False)
         lax.set_axis_off()
-        lax.imshow(logo, origin='upper')
+        lax.imshow(logo, origin='upper', cmap='gray')
         
         # Setup the A Team sources, plus the Sun and Jupiter
         srcs = [ephem.Sun(), ephem.Jupiter()]
