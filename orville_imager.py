@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function, division
+
 import os
 import sys
 import copy
@@ -22,9 +24,11 @@ from collections import deque
 from scipy.special import pro_ang1, iv
 from scipy.stats import scoreatpercentile as percentile
 
-from lsl.common.constants import c as speedOfLight
-from lsl.common.stations import lwasv, parseSSMIF
-from lsl.correlator import uvUtils
+from astropy.constants import c as speedOfLight
+speedOfLight = speedOfLight.to('m/s').value
+
+from lsl.common.stations import lwasv, parse_ssmif
+from lsl.correlator import uvutils
 from lsl.imaging import utils
 from lsl.common.adp import fS, fC
 from lsl.astro import MJD_OFFSET, DJD_OFFSET
@@ -61,7 +65,7 @@ if not os.path.exists(CAL_PATH):
 
 
 STATION = lwasv
-ANTENNAS = STATION.getAntennas()
+ANTENNAS = STATION.antennas
 
 
 W_STEP = 0.1
@@ -83,12 +87,12 @@ def round_up_to_even(n, maxprimes=3):
         r = n
         nPrimes = 0
         while r > 1 and r % 2 == 0:
-            r /= 2
+            r //= 2
         while r > 1 and r % 3 == 0:
-            r /= 3
+            r //= 3
             nPrimes += 1
         while r > 1 and r % 5 == 0:
-            r /= 5
+            r //= 5
             nPrimes += 1
         if r == 1 and nPrimes <= maxprimes:
             return n
@@ -101,7 +105,7 @@ def timetag_to_mjdatetime(time_tag):
     """
     
     ## Get the date
-    unix_time_tag_i = time_tag / int(fS)
+    unix_time_tag_i = time_tag // int(fS)
     unix_time_tag_f = (time_tag % int(fS)) / float(fS)
     mjd = int(40587 + unix_time_tag_i // 86400)
     unix_day_frac_s = unix_time_tag_i - (unix_time_tag_i // 86400) * 86400
@@ -191,21 +195,21 @@ class CaptureOp(object):
     def shutdown(self):
         self.shutdown_event.set()
     def cor_callback(self, seq0, time_tag, chan0, nchan, navg, nsrc, hdr_ptr, hdr_size_ptr):
-        print "++++++++++++++++ seq0     =", seq0
-        print "                 time_tag =", time_tag
+        print("++++++++++++++++ seq0     =", seq0)
+        print("                 time_tag =", time_tag)
         hdr = {'time_tag': time_tag,
             'seq0':     seq0, 
             'chan0':    chan0,
             'cfreq':    chan0*25e3,
             'nchan':    nchan,
-            'bw':       nchan*25e3,
+            'bw':       nchan*4*25e3,
             'navg':     navg,
-            'nstand':   int(numpy.sqrt(8*nsrc+1)-1)/2,
+            'nstand':   int(numpy.sqrt(8*nsrc+1)-1)//2,
             'npol':     2,
             'nbl':      nsrc,
             'complex':  True,
             'nbit':     32}
-        print "******** CFREQ:", hdr['cfreq']
+        print("******** CFREQ:", hdr['cfreq'])
         hdr_str = json.dumps(hdr)
         # TODO: Can't pad with NULL because returned as C-string
         #hdr_str = json.dumps(hdr).ljust(4096, '\0')
@@ -224,7 +228,7 @@ class CaptureOp(object):
             good, missing = get_good_and_missing_rx()
             while not self.shutdown_event.is_set():
                 status = capture.recv()
-                print 'III', status
+                print('III', status)
                 
                 # Determine the fill level of the last gulp
                 new_good, new_missing = get_good_and_missing_rx()
@@ -286,11 +290,11 @@ class SpectraOp(object):
             draw.line([(0, i * 65), (im.size[0], i * 65)], fill = '#000000')
             
         # Power as a function of frequency for all antennas
-        x = numpy.arange(nchan) * 64 / nchan
+        x = numpy.arange(nchan) * 64 // nchan
         for s in xrange(nstand):
             if s >= height * width:
                 break
-            x0, y0 = (s % width) * 65 + 1, (s / width + 1) * 65
+            x0, y0 = (s % width) * 65 + 1, (s // width + 1) * 65
             draw.text((x0 + 5, y0 - 60), str(s+1), font=font, fill='#000000')
             
             ## XX
@@ -331,7 +335,7 @@ class SpectraOp(object):
                                   'ngpu': 1,
                                   'gpu0': BFGetGPU(),})
         
-        status = [ant.getStatus() for ant in ANTENNAS]
+        status = [ant.combined_status for ant in ANTENNAS]
         
         for iseq in self.iring.read(guarantee=True):
             ihdr = json.loads(iseq.header.tostring())
@@ -353,7 +357,7 @@ class SpectraOp(object):
             self.iring.resize(igulp_size, igulp_size*10)
             
             # Setup the arrays for the frequencies and auto-correlations
-            freq = (chan0 + numpy.arange(nchan))*fC
+            freq = chan0*fC + numpy.arange(nchan)*4*fC
             autos = [i*(2*(nstand-1)+1-i)//2 + i for i in xrange(nstand)]
             
             intCount = 0
@@ -517,7 +521,7 @@ class BaselineOp(object):
             self.iring.resize(igulp_size, igulp_size*10)
             
             # Setup the arrays for the frequencies and baseline lengths
-            freq = (chan0 + numpy.arange(nchan))*fC
+            freq = chan0*fC + numpy.arange(nchan)*4*fC
             t0 = time.time()
             distname = os.path.join(CAL_PATH, 'dist_%i_%i_%i.npy' % (nbl, chan0, nchan))
             try:
@@ -525,14 +529,14 @@ class BaselineOp(object):
                     raise IOError
                 dist = numpy.load(distname)
             except IOError:
-                print 'dist cache failed'
-                uvw = uvUtils.computeUVW(ANTENNAS[0::2], HA=0, dec=self.station.lat*180/numpy.pi,
-                                            freq=freq[0], site=self.station.getObserver(), IncludeAuto=True)
-                print 'uvw.shape', uvw.shape
+                print('dist cache failed')
+                uvw = uvutils.compute_uvw(ANTENNAS[0::2], HA=0, dec=self.station.lat*180/numpy.pi,
+                                            freq=freq[0], site=self.station.get_observer(), include_auto=True)
+                print('uvw.shape', uvw.shape)
                 dist = numpy.sqrt(uvw[:,0,0]**2 + uvw[:,1,0]**2)
                 numpy.save(distname, dist)
             valid = numpy.where( dist > 0.1 )[0]
-            print '@dist', time.time() - t0, '@', dist.shape, dist.size*4/1024.**2
+            print('@dist', time.time() - t0, '@', dist.shape, dist.size*4/1024.**2)
             
             intCount = 0
             prev_time = time.time()
@@ -642,7 +646,7 @@ class ImagingOp(object):
                 
                 # Figure out the grid size and resolution - assumes a station size of 
                 # 100 m and maximum angular extent for the sky of 130 degrees
-                min_lambda = 299792458.0 / ((chan0+nchan-1)*fC)     # m
+                min_lambda = 299792458.0 / ((chan0 + 4*nchan-1)*fC)     # m
                 rayleigh_res = 1.22 * min_lambda / 100.0 * 180/numpy.pi # deg
                 res = rayleigh_res / 4.0    # deg
                 grid_size = int(numpy.ceil(130.0 / res))    # px
@@ -684,21 +688,20 @@ class ImagingOp(object):
                     
                 # Setup the uvw coordinates and get them ready for gridding
                 t0 = time.time()
-                freq = (chan0 + numpy.arange(nchan))*fC
+                freq = chan0*fC + numpy.arange(nchan)*4*fC
                 dfreq = freq*1.0
                 dfreq.shape = (freq.size//self.decimation, self.decimation)
                 dfreq = dfreq.mean(axis=1)
-                print 'imager', dfreq[0], dfreq[1], dfreq[2]
                 uvwname = os.path.join(CAL_PATH, 'uvw_%i_%i_%i.npy' % (nbl, chan0, nchan))
                 try:
                     if os.path.exists(uvwname) and os.path.getmtime(uvwname) < os.path.getmtime(__file__):
                         raise IOError
                     uvw = numpy.load(uvwname)
                 except IOError:
-                    print 'uvw cache failed'
+                    print('uvw cache failed')
                     uvw = numpy.zeros((3,nchan,nstand,nstand,1,1), dtype=numpy.float32)
-                    uvwT = uvUtils.computeUVW(ANTENNAS[0::2], HA=self.phase_center_ha*12/numpy.pi, dec=self.phase_center_dec*180/numpy.pi,
-                                              freq=freq, site=self.station.getObserver(), IncludeAuto=True).transpose(1,2,0)
+                    uvwT = uvutils.compute_uvw(ANTENNAS[0::2], HA=self.phase_center_ha*12/numpy.pi, dec=self.phase_center_dec*180/numpy.pi,
+                                              freq=freq, site=self.station.get_observer(), include_auto=True).transpose(1,2,0)
                     uvwT.shape += (1,1)
                     k = 0
                     for i in xrange(nstand):
@@ -708,7 +711,7 @@ class ImagingOp(object):
                             k += 1
                     uvw[1,:,:] *= -1
                     numpy.save(uvwname, uvw)
-                print '@uvw', time.time() - t0, '@', uvw.shape, uvw.size*4/1024.**2
+                print('@uvw', time.time() - t0, '@', uvw.shape, uvw.size*4/1024.**2)
                 
                 # Setup the baselines phasing terms for zenith
                 t0 = time.time()
@@ -718,7 +721,7 @@ class ImagingOp(object):
                     #    raise IOError
                     phases = numpy.load(phsname)
                 except IOError:
-                    print 'phase cache failed'
+                    print('phase cache failed')
                     phases = numpy.zeros((nchan,nstand*(nstand+1)//2,npol,npol), dtype=numpy.complex64)
                     k = 0
                     for i in xrange(nstand):
@@ -733,7 +736,7 @@ class ImagingOp(object):
                         gainY0 = a.cable.gain(freq)
                         cgainY0 = numpy.exp(2j*numpy.pi*freq*delayY0) / numpy.sqrt(gainY0)
                         ## Goodness check
-                        if ANTENNAS[2*i + 0].getStatus() != 33 or ANTENNAS[2*i + 1].getStatus() != 33:
+                        if ANTENNAS[2*i + 0].combined_status != 33 or ANTENNAS[2*i + 1].combined_status != 33:
                             cgainX0 *= 0.0
                             cgainY0 *= 0.0
                             
@@ -749,7 +752,7 @@ class ImagingOp(object):
                             gainY1 = a.cable.gain(freq)
                             cgainY1 = numpy.exp(2j*numpy.pi*freq*delayY1) / numpy.sqrt(gainY1)
                             ## Goodness check
-                            if ANTENNAS[2*j + 0].getStatus() != 33 or ANTENNAS[2*j + 1].getStatus() != 33:
+                            if ANTENNAS[2*j + 0].combined_status != 33 or ANTENNAS[2*j + 1].combined_status != 33:
                                 cgainX1 *= 0.0
                                 cgainY1 *= 0.0
                                 
@@ -759,12 +762,12 @@ class ImagingOp(object):
                             phases[:,k,1,1] = cgainY0.conj()*cgainY1
                             k += 1
                     numpy.save(phsname, phases)
-                print '@phases', time.time() - t0, '@', phases.shape, phases.size*(4+4)/1024.**2
+                print('@phases', time.time() - t0, '@', phases.shape, phases.size*(4+4)/1024.**2)
                 
                 # Build the gridding kernel
                 t0 = time.time()
                 kernel = numpy.zeros((SUPPORT_SIZE*SUPPORT_OVERSAMPLE,), dtype=numpy.complex64)
-                kx = numpy.arange(-(SUPPORT_SIZE*SUPPORT_OVERSAMPLE)/2+1, (SUPPORT_SIZE*SUPPORT_OVERSAMPLE)/2+1, 
+                kx = numpy.arange(-(SUPPORT_SIZE*SUPPORT_OVERSAMPLE)//2+1, (SUPPORT_SIZE*SUPPORT_OVERSAMPLE)//2+1, 
                                   dtype=numpy.float32) / SUPPORT_OVERSAMPLE
                 kernel = numpy.sinc(kx) * iv(0, 8.6*numpy.sqrt(1-(2*numpy.abs(kx)/SUPPORT_SIZE)**2)) / iv(0, 8.6)
                 
@@ -772,16 +775,16 @@ class ImagingOp(object):
                 weights = numpy.ones((nchan,nstand,nstand,npol,npol), dtype=numpy.complex64)
                 for i in xrange(nstand):
                     # Mask out bad antennas
-                    if ANTENNAS[2*i+0].getStatus() != 33 or ANTENNAS[2*i+1].getStatus() != 33:
+                    if ANTENNAS[2*i+0].combined_status != 33 or ANTENNAS[2*i+1].combined_status != 33:
                         weights[:,i,:,:,:] = 0.0
-                    if ANTENNAS[2*i+0].getStatus() != 33 or ANTENNAS[2*i+1].getStatus() != 33:
+                    if ANTENNAS[2*i+0].combined_status != 33 or ANTENNAS[2*i+1].combined_status != 33:
                         weights[:,:,i,:,:] = 0.0
                         
                     for j in xrange(nstand):
                         if i == j or i == (nstand-1) or j == (nstand-1):
                              weights[:,i,j,:,:] = 0.0
                         
-                print '@weights', time.time() - t0, '@', weights.shape, weights.size*(4+4)/1024.**2
+                print('@weights', time.time() - t0, '@', weights.shape, weights.size*(4+4)/1024.**2)
                 
                 # ... and get them on the GPU
                 uvw = uvw.reshape(3,nchan//self.decimation,self.decimation*nstand**2)
@@ -870,7 +873,7 @@ class ImagingOp(object):
                             BFSync()
                             copy_array(odata, self.grid)
                             
-                            time_tag += navg * (int(fS) / 100)
+                            time_tag += navg * (int(fS) // 100)
                             intCount += 1
                             
                             curr_time = time.time()
@@ -895,6 +898,7 @@ class WriterOp(object):
         self.log = log
         self.iring = iring
         self.output_dir_images = os.path.join(base_dir, 'images')
+        self.output_dir_archive = os.path.join(base_dir, 'archive')
         self.output_dir_lwatv = os.path.join(base_dir, 'lwatv')
         self.core = core
         self.gpu = gpu
@@ -903,6 +907,8 @@ class WriterOp(object):
             os.mkdir(base_dir)
         if not os.path.exists(self.output_dir_images):
             os.mkdir(self.output_dir_images)
+        if not os.path.exists(self.output_dir_archive):
+            os.mkdir(self.output_dir_archive)  
         if not os.path.exists(self.output_dir_lwatv):
             os.mkdir(self.output_dir_lwatv)
             
@@ -961,6 +967,51 @@ class WriterOp(object):
         db.close()
         self.log.debug("Added integration to disk as part of '%s'", os.path.basename(outname))
         
+    def _save_archive_image(self, station, time_tag, hdr, freq, data):
+        # Get the fill level as a fraction
+        global FILL_QUEUE
+        try:
+            fill = FILL_QUEUE.get_nowait()
+            self.log.debug("Fill level is %.1f%%", 100.0*fill)
+            FILL_QUEUE.task_done()
+        except Queue.Empty:
+            fill = 0.0
+            
+        # Get the date
+        mjd, h, m, s = timetag_to_mjdatetime(time_tag)
+        
+        # Figure out the LST
+        mjd_f = mjd + (h + m/60.0 + s/3600.0)/24.0
+        station.date = mjd_f + (MJD_OFFSET - DJD_OFFSET)
+        lst = station.sidereal_time()
+        
+        # Fill the info dictionary that describes this image
+        info = {'start_time':    mjd_f,
+                'int_len':       hdr['navg'] / 100.0 / 86400.0,
+                'fill':          fill,
+                'lst':           lst * 0.5/numpy.pi,
+                'start_freq':    freq[0],
+                'stop_freq':     freq[-1],
+                'bandwidth':     freq[1]-freq[0],
+                'center_ra':     (lst - hdr['phase_center_ha']) * 180/numpy.pi,
+                'center_dec':    hdr['phase_center_dec'] * 180/numpy.pi,
+                'center_az':     hdr['phase_center_az'] * 180/numpy.pi,
+                'center_alt':    hdr['phase_center_alt'] * 180/numpy.pi,
+                'pixel_size':    hdr['res'],
+                'stokes_params': ('I,Q,U,V' if hdr['basis'] == 'Stokes' else 'XX,XY,YX,YY')}
+                
+        # Write the image to disk
+        outname = os.path.join(self.output_dir_archive, str(mjd))
+        if not os.path.exists(outname):
+            os.mkdir(outname)
+        filename = '%i_%02i%02i%02i_%.3fMHz_%.3fMHz.oims' % (mjd, h, 0, 0, freq.min()/1e6, freq.max()/1e6)
+        outname = os.path.join(outname, filename)
+        
+        db = OrvilleImageDB(outname, mode='a', station=station.name)
+        db.add_image(info, data)
+        db.close()
+        self.log.debug("Added archive integration to disk as part of '%s'", os.path.basename(outname))
+        
     def main(self):
         cpu_affinity.set_core(self.core)
         if self.gpu != -1:
@@ -979,14 +1030,15 @@ class WriterOp(object):
         ## Create
         fig = plt.Figure(figsize=(5*2, 5*(400.3/390)),
                          facecolor='black')
-        ax = [fig.add_axes((i/2.0, 0, 1.0/2.0, 1.005), axisbg='black') for i in xrange(2)]
+        ax = [fig.add_axes((i/2.0, 0, 1.0/2.0, 1.005), facecolor='black') for i in xrange(2)]
         ax[0].set_axis_off()
         ax[1].set_axis_off()
         ## Logo-ize
         logo = PIL.Image.open(os.path.join(BASE_PATH, 'logo.png'))
+        logo = logo.getchannel('A')
         lax = fig.add_axes([0.01, 0, 0.12, 0.10], frameon=False)
         lax.set_axis_off()
-        lax.imshow(logo, origin='upper')
+        lax.imshow(logo, origin='upper', cmap='gray')
         
         # Setup the A Team sources, plus the Sun and Jupiter
         srcs = [ephem.Sun(), ephem.Jupiter()]
@@ -1031,11 +1083,14 @@ class WriterOp(object):
             
             # Setup the frequencies
             t0 = time.time()
-            freq = chan0*fC + numpy.arange(nchan)*fC*decimation
-            print 'writer', freq[0], freq[1], freq[2]
+            freq = chan0*fC + numpy.arange(nchan)*4*fC
+            arc_freq = freq*1.0
+            arc_freq = arc_freq.reshape(6, -1)
+            arc_freq = arc_freq.mean(axis=1)
             
             # Setup the frequencies to write images for
             ichans = range(nchan//2//6, nchan, nchan//6)
+            ichans = [ichans[2],]   ## Only make one image at the center of the band
             
             # Setup the buffer for the automatic color scale control
             vmax = [deque([], maxlen=60) for c in freq]
@@ -1057,8 +1112,15 @@ class WriterOp(object):
                 self._save_image(self.station, time_tag, ihdr, freq, idata)
                 self.log.debug('Save time: %.3f s', time.time()-tSave)
                 
+                ## Write the archive image set to disk
+                tArchive = time.time()
+                arc_data = idata.reshape(arc_freq.size,-1,npol*npol,ngrid,ngrid)
+                arc_data = arc_data.mean(axis=1)
+                self._save_archive_image(self.station, time_tag, ihdr, arc_freq, arc_data)
+                self.log.debug('Archive save time: %.3f s', time.time()-tArchive)
+                
                 ## Timetag stuff
-                unix_time_tag_s = time_tag / int(fS)
+                unix_time_tag_s = time_tag // int(fS)
                 date_str = datetime.utcfromtimestamp(unix_time_tag_s).strftime('%Y/%m/%d %H:%M:%S UTC')
                 
                 ## Compute the locations of the brigth sources and the Galactic plane
@@ -1102,11 +1164,11 @@ class WriterOp(object):
                         
                         ### Add in the locations of the A Team sources
                         for x,y,n in zip(ateam_x, ateam_y, ateam_s):
-                            ax[i].text(ngrid/2-x*clip_size, ngrid/2+(y +  0.0083)*clip_size, n,
+                            ax[i].text(ngrid//2-x*clip_size, ngrid//2+(y +  0.0083)*clip_size, n,
                                        color='white', fontsize=14)
                             
                         ### Add in the Galactic plane
-                        ax[i].plot(ngrid/2-plane_x*clip_size, ngrid/2+plane_y*clip_size,
+                        ax[i].plot(ngrid//2-plane_x*clip_size, ngrid//2+plane_y*clip_size,
                                    marker='', linestyle='--', color='white', alpha=0.60)
                         
                         
@@ -1140,7 +1202,7 @@ class WriterOp(object):
                     
                     self.log.debug("Wrote LWATV %i, %i to disk as '%s'", intCount, c, os.path.basename(outname))
                     
-                time_tag += navg * (int(fS) / 100)
+                time_tag += navg * (int(fS) // 100)
                 intCount += 1
                 
                 curr_time = time.time()
@@ -1387,8 +1449,8 @@ if __name__ == '__main__':
                         help='IP address to listen to')
     parser.add_argument('-p', '--port', type=int, default=11000,
                         help='UDP port to listen to')
-    parser.add_argument('-d', '--decimation', type=int, default=4,
-                        help='frequecy decimation factor')
+    parser.add_argument('-d', '--decimation', type=int, default=1,
+                        help='additional frequecy decimation factor')
     parser.add_argument('-l', '--logfile',    default=None,
                         help='Specify log file')
     parser.add_argument('-o', '--output-dir', type=str, default=os.getcwd(),
