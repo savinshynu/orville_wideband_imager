@@ -33,7 +33,6 @@ Environment=VMA_MTU=9000
 ExecStart=/bin/bash -ec '\
 numactl --cpunodebind=0 --membind=0 -- \
 python /home/jdowell/orville/orville_imager.py \
-         --decimation  4 \
 	 --logfile    /data/orville/log/wideband-imager.log \
 	 --output-dir /data/orville'
 

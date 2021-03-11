@@ -69,7 +69,7 @@ def main(args):
         temp_path = mkdtemp(suffix='.movie')
         for j,png in enumerate(pngs):
             shutil.copy(png, os.path.join(temp_path, "%06i.png" % j))
-        os.system('avconv -y -v 0 -i %s/%%06d.png -q:v 5 -r 15 -vcodec libx264 -pix_fmt yuv420p %s' % (temp_path, moviename))
+        os.system('ffmpeg -y -v 0 -i %s/%%06d.png -q:v 5 -r 15 -vcodec libx264 -pix_fmt yuv420p %s' % (temp_path, moviename))
         shutil.rmtree(temp_path)
         success += 1
         print('-> Finished in %.1f s' % (time.time()-t0))
