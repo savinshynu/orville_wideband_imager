@@ -1367,8 +1367,8 @@ def main(args):
         log.info("  %s: %s", arg, getattr(args, arg))
         
     # Setup the cores and GPUs to use
-    cores = [0, 1, 2, 3, 4, 5, 6]
-    gpus  = [0,]*len(cores)
+    cores = [int(v, 10) for v in args.cores.split(',')]
+    gpus  = [args.gpu,]*len(cores)
     log.info("CPUs:         %s", ' '.join([str(v) for v in cores]))
     log.info("GPUs:         %s", ' '.join([str(v) for v in gpus]))
     
@@ -1451,6 +1451,10 @@ if __name__ == '__main__':
                         help='UDP port to listen to')
     parser.add_argument('-d', '--decimation', type=int, default=1,
                         help='additional frequecy decimation factor')
+    parser.add_argument('-c', '--cores', type=str, default='0,1,2,3,4,5,6',
+                        help='comma separated list of CPU cores to bind to')
+    parser.add_argument('-g', '--gpu', type=int, default=0,
+                        help='GPU to use')
     parser.add_argument('-l', '--logfile',    default=None,
                         help='Specify log file')
     parser.add_argument('-o', '--output-dir', type=str, default=os.getcwd(),
