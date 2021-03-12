@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Where the data are stored
+ORVILLE_DATA_DIR=/data/orville_two
+
+# Where the software is stored
+ORVILLE_SOFTWARE_DIR=/home/jdowell/orville
+
+# Delete (u,v) radial and spectra plots more than three weeks old
+find ${ORVILLE_DATA_DIR}/baselines -mtime +22 -exec rm -r {} \;
+find ${ORVILLE_DATA_DIR}/spectra -mtime +22 -exec rm -r {} \;
+
+# Delete old logs more than 6 months old
+find ${ORVILLE_DATA_DIR}/log -mtime +181 -exec rm {} \;
+
+# Build movies of the LWATV images from previous days
+for mjd in `find ${ORVILLE_DATA_DIR}/lwatv -type d -name 5\* | sort | head -n -1 `; do
+    ${ORVILLE_SOFTWARE_DIR}/make_movies.py -o ${ORVILLE_DATA_DIR}/movies ${mjd}
+    if [[ "$?" == "0" ]]; then
+        rm -rf ${mjd}
+    fi
+done
+
+## Backup the archive
+#rsync -e ssh -avH ${ORVILLE_DATA_DIR}/archive/5* pasi@lda10g.alliance.unm.edu:/FileStore/Orville/
+
+# Delete events as needed to keep us below 2 TB
+rawsize=`du -b ${ORVILLE_DATA_DIR}/images | tail -n1 | awk '{print $1}'`
+while [[ "${rawsize}" -ge $((2*1024*1024*1024*1024)) ]]; do
+    oldest=`ls -td ${ORVILLE_DATA_DIR}/images/5* | tail -n1`
+    echo "Removing ${oldest}"
+    rm -rf ${oldest}
+    rawsize=`du -b ${ORVILLE_DATA_DIR}/images | tail -n1 | awk '{print $1}'`
+done
+
+# Report on disk usage
+echo "Orville Two Disk Usage:"
+usage=`du -hs ${ORVILLE_DATA_DIR}/baselines | tail -n1 | awk '{print $1}'`
+echo "  (u,v) radial plots: ${usage}"
+usage=`du -hs ${ORVILLE_DATA_DIR}/spectra | tail -n1 | awk '{print $1}'`
+echo "  spectra plots: ${usage}"
+usage=`du -hs ${ORVILLE_DATA_DIR}/lwatv | tail -n1 | awk '{print $1}'`
+echo "  LWATV images: ${usage}"
+usage=`du -hs ${ORVILLE_DATA_DIR}/movies | tail -n1 | awk '{print $1}'`
+echo "  LWATV movies: ${usage}"
+usage=`du -hs ${ORVILLE_DATA_DIR}/images | tail -n1 | awk '{print $1}'`
+echo "  Raw images: ${usage}"
+usage=`du -hs ${ORVILLE_DATA_DIR} | tail -n1 | awk '{print $1}'`
+echo "==="
+echo " Total disk usage: ${usage}"
