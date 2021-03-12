@@ -15,7 +15,7 @@ KillSignal=SIGTERM
 TimeoutStopSec=20
 
 # Run before process
-ExecStartPre=/bin/bash -c '[ -d /data/orville1/log ] || mkdir -p /data/orville1/log'
+ExecStartPre=/bin/bash -c '[ -d /data/orville_two/log ] || mkdir -p /data/orville_two/log'
 
 # Setup the environment
 Environment=BIFROST_INCLUDE_PATH=/home/jdowell/orville/bifrost/src/bifrost
@@ -35,8 +35,8 @@ numactl --cpunodebind=1 --membind=1 -- \
 python /home/jdowell/orville/orville_imager.py \
    --port 11001 \
 	 --cores 8,9,10,11,12,13 --gpu 1 \
-	 --logfile    /data/orville/log/wideband-imager.log \
-	 --output-dir /data/orville'
+	 --logfile    /data/orville_two/log/wideband-imager.log \
+	 --output-dir /data/orville_two'
 
 [Install]
 WantedBy=multi-user.target
