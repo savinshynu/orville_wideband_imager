@@ -1,5 +1,5 @@
 [Unit]
-Description=ADP Wideband Imager Server - Tuning 0
+Description=ADP Wideband Imager Server - Tuning 1
 After=network-online.target
 Wants=network-online.target
 
@@ -15,7 +15,7 @@ KillSignal=SIGTERM
 TimeoutStopSec=20
 
 # Run before process
-ExecStartPre=/bin/bash -c '[ -d /data/orville/log ] || mkdir -p /data/orville/log'
+ExecStartPre=/bin/bash -c '[ -d /data/orville1/log ] || mkdir -p /data/orville1/log'
 
 # Setup the environment
 Environment=BIFROST_INCLUDE_PATH=/home/jdowell/orville/bifrost/src/bifrost
@@ -31,10 +31,10 @@ Environment=VMA_THREAD_MODE=0
 Environment=VMA_MTU=9000 
 
 ExecStart=/bin/bash -ec '\
-numactl --cpunodebind=0 --membind=0 -- \
+numactl --cpunodebind=1 --membind=1 -- \
 python /home/jdowell/orville/orville_imager.py \
-   --port 11000 \
-	 --cores 0,1,2,3,4,5,6 --gpu 0 \
+   --port 11001 \
+	 --cores 8,9,10,11,12,13 --gpu 1 \
 	 --logfile    /data/orville/log/wideband-imager.log \
 	 --output-dir /data/orville'
 
