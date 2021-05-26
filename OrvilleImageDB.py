@@ -67,7 +67,7 @@ class OrvilleImageDB(object):
     # (including RA) and pixel sizes are in degrees.  All other entries are in
     # standard mks units.
     
-    _FORMAT_VERSION = 'OrvilleImageDBv002'
+    _FORMAT_VERSION = b'OrvilleImageDBv002'
     
     class _FileHeader_v1(PrintableLittleEndianStructure):
         _pack_   = 1
@@ -175,9 +175,9 @@ class OrvilleImageDB(object):
         self._is_outdated = False
         
         if not self._is_new:
-            self.version = self.file.read(24).rstrip('\x00')
+            self.version = self.file.read(24).rstrip(b'\x00')
             if self.version != self._FORMAT_VERSION:
-                if self.version == 'OrvilleImageDBv001':
+                if self.version == b'OrvilleImageDBv001':
                     self._FileHeader = self._FileHeader_v1
                     self._EntryHeader = self._EntryHeader_v1
                     self._TIME_OFFSET = self._TIME_OFFSET_v1
@@ -200,7 +200,7 @@ class OrvilleImageDB(object):
                 # It looks like we should have a good header, at least ....
                 self.header = self._FileHeader()
                 self.file.readinto(self.header)
-                self.nstokes = len(self.header.stokes_params.split(','))
+                self.nstokes = len(self.header.stokes_params.split(b','))
                 
                 entry_header = self._EntryHeader()
                 int_size = ctypes.sizeof(entry_header) \
