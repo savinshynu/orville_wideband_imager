@@ -1,7 +1,8 @@
 from __future__ import print_function, division, absolute_import
-import sys
-if sys.version_info > (3,):
-    xrange = range
+try:
+    range = xrange
+except NameError:
+    pass
     
 import os
 import numpy
@@ -67,7 +68,7 @@ class OrvilleImageDB(object):
     # (including RA) and pixel sizes are in degrees.  All other entries are in
     # standard mks units.
     
-    _FORMAT_VERSION = b'OrvilleImageDBv002'
+    _FORMAT_VERSION = 'OrvilleImageDBv002'
     
     class _FileHeader_v1(PrintableLittleEndianStructure):
         _pack_   = 1
@@ -176,8 +177,12 @@ class OrvilleImageDB(object):
         
         if not self._is_new:
             self.version = self.file.read(24).rstrip(b'\x00')
+            try:
+                self.version = self.version.decode()
+            except AttributeError:
+                pass
             if self.version != self._FORMAT_VERSION:
-                if self.version == b'OrvilleImageDBv001':
+                if self.version == 'OrvilleImageDBv001':
                     self._FileHeader = self._FileHeader_v1
                     self._EntryHeader = self._EntryHeader_v1
                     self._TIME_OFFSET = self._TIME_OFFSET_v1
@@ -279,6 +284,10 @@ class OrvilleImageDB(object):
         
         if type(stokes_params) is list:
             stokes_params = ','.join(stokes_params)
+        try:
+            stokes_params = stokes_params.encode()
+        except AttributeError:
+            pass
             
         if self._is_new:
             # If this is the file's first image, fill in values of the file
@@ -287,9 +296,12 @@ class OrvilleImageDB(object):
             self.header.ngrid         = ngrid
             self.header.pixel_size    = pixel_size
             self.header.nchan         = nchan
-            self.file.write(struct.pack('<24s', self.version))
+            try:
+                self.file.write(struct.pack('<24s', self.version.encode()))
+            except AttributeError:
+                self.file.write(struct.pack('<24s', self.version))
             self.file.write(self.header)
-            self.nstokes = len(self.header.stokes_params.split(','))
+            self.nstokes = len(self.header.stokes_params.split(b','))
             self._is_new = False
             
         else:
@@ -457,8 +469,8 @@ class OrvilleImageDB(object):
         # Determine the sort order of those times.
         times = numpy.array([
                 struct.unpack_from('<d', data, offset=i)[0] for i in
-                xrange(inDB._TIME_OFFSET,
-                       int_size * inDB.nint, int_size)])
+                range(inDB._TIME_OFFSET,
+                      int_size * inDB.nint, int_size)])
         
         intOrder = times.argsort()
         
@@ -476,7 +488,7 @@ class OrvilleImageDB(object):
             outFile.flush()
             
             outEntryHeaderStruct = inDB._EntryHeader()
-            for iOut in xrange(inDB.nint):
+            for iOut in range(inDB.nint):
                 i = intOrder[iOut] * int_size
                 entry_header = data[i:i+headerSize]
                 entry_data = data[i+headerSize:i+int_size]
