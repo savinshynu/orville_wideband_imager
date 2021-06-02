@@ -7,7 +7,10 @@ import sys
 import copy
 import json
 import time
-import Queue
+try:
+    import queue as Queue
+except ImportError:
+    import Queue
 import ephem
 import numpy
 import ctypes
