@@ -310,14 +310,14 @@ class SpectraOp(object):
             if status[2*s+0] != 33:
                 c = '#799CB4'
             y = ((54.0 / (maxval - minval)) * (specs[s,:,0] - minval)).clip(0, 54)
-            draw.line(zip(x0 + x, y0 - y), fill=c)
+            draw.line(list(zip(x0 + x, y0 - y)), fill=c)
             
             ## YY
             c = '#FF7F0E'
             if status[2*s+1] != 33:
                 c = '#FFC28C'
             y = ((54.0 / (maxval - minval)) * (specs[s,:,1] - minval)).clip(0, 54)
-            draw.line(zip(x0 + x, y0 - y), fill=c)
+            draw.line(list(zip(x0 + x, y0 - y)), fill=c)
             
         # Summary
         ySummary = height * 65 + 2
@@ -327,8 +327,8 @@ class SpectraOp(object):
         rangeStr = 'range shown: %.3f to %.3f dB' % (minval, maxval)
         draw.text((210, ySummary), rangeStr, font = font, fill = '#000000')
         x = im.size[0] + 15
-        for label, c in reversed(zip(('good XX','good YY','flagged XX','flagged YY'),
-                                     ('#1F77B4','#FF7F0E','#799CB4',   '#FFC28C'))):
+        for label, c in reversed(list(zip(('good XX','good YY','flagged XX','flagged YY'),
+                                          ('#1F77B4','#FF7F0E','#799CB4',   '#FFC28C')))):
             x -= draw.textsize(label, font = font)[0] + 20
             draw.text((x, ySummary), label, font = font, fill = c)
             
@@ -475,11 +475,11 @@ class BaselineOp(object):
             
             ## XX
             y = ((299.0 / (maxval - minval)) * (baselines[valid,c,0] - minval)).clip(0, 299)
-            draw.point(zip(x0 + x, y0 - y), fill='#1F77B4')
+            draw.point(list(zip(x0 + x, y0 - y)), fill='#1F77B4')
             
             ## YY
             y = ((299.0 / (maxval - minval)) * (baselines[valid,c,2] - minval)).clip(0, 299)
-            draw.point(zip(x0 + x, y0 - y), fill='#FF7F0E')
+            draw.point(list(zip(x0 + x, y0 - y)), fill='#FF7F0E')
             
             ### XY
             #y = ((299.0 / (maxval - minval)) * (baselines[valid,c,1] - minval)).clip(0, 299)
@@ -493,8 +493,8 @@ class BaselineOp(object):
         rangeStr = 'range shown: %.6f - %.6f' % (minval, maxval)
         draw.text((210, ySummary), rangeStr, font = font, fill = '#000000')
         x = im.size[0] + 15
-        #for label, c in reversed(zip(('XX','XY','YY'), ('#1F77B4','#A00000','#FF7F0E'))):
-        for label, c in reversed(zip(('XX','YY'), ('#1F77B4','#FF7F0E'))):
+        #for label, c in reversed(list(zip(('XX','XY','YY'), ('#1F77B4','#A00000','#FF7F0E')))):
+        for label, c in reversed(list(zip(('XX','YY'), ('#1F77B4','#FF7F0E')))):
             x -= draw.textsize(label, font = font)[0] + 20
             draw.text((x, ySummary), label, font = font, fill = c)
             
@@ -1267,6 +1267,11 @@ class UploaderOp(object):
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      shell=True)
                 output, error = p.communicate()
+                try:
+                    output = output.decode()
+                except AttributeError:
+                    # Python2 catch
+                    pass
                 mjd = os.path.basename(output.split('\n')[0])
             except subprocess.CalledProcessError:
                 mjd = '*'
@@ -1279,6 +1284,11 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
+                try:
+                    output = output.decode()
+                except AttributeError:
+                    # Python2 catch
+                    pass
                 latest_spectra = output.split('\n')[0]
                 shutil.copy2(latest_spectra, '/tmp/orville_spec.png')
             except (subprocess.CalledProcessError, OSError, IOError):
@@ -1290,6 +1300,11 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
+                try:
+                    output = output.decode()
+                except AttributeError:
+                    # Python2 catch
+                    pass
                 latest_uvdist = output.split('\n')[0]
                 shutil.copy2(latest_uvdist, '/tmp/orville_uvdist.png')
             except (subprocess.CalledProcessError, OSError, IOError):
@@ -1301,6 +1316,11 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
+                try:
+                    output = output.decode()
+                except AttributeError:
+                    # Python2 catch
+                    pass
                 latest_lwatv = output.split('\n')[0]
                 #shutil.copy2(latest_lwatv, '/tmp/lwatv.png')
                 shutil.copy2(latest_lwatv, '/tmp/orville_lwatv.png')
