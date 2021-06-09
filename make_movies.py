@@ -1,11 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Given the name of a directory containing a collection of LWATV images,
 convert the images into movies.
 """
-
-from __future__ import print_function
 
 import os
 import sys
@@ -44,9 +42,9 @@ def main(args):
     print("Found %i image sets amongst %i images" % (nsets, len(pngs)))
 
     # Make the movies, one for each set found
-    timestamps = sorted(frames.keys())
+    timestamps = sorted(list(frames.keys()))
     success = 0
-    for i in xrange(nsets):
+    for i in range(nsets):
         ## Set the movie name - this is in the parent directory of the LWATV image direcotry
         moviename = os.path.join(args.output_dir, "%s_%i.mov" % (mjd, i))
         
