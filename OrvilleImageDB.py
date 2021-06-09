@@ -133,7 +133,7 @@ class OrvilleImageDB(object):
         self._TIME_OFFSET = self._TIME_OFFSET_v2
         
         # 'station' is a required keyword
-        if mode[0] == 'w' and station == '':
+        if mode[0] == 'w' and (station == '' or station == b''):
             raise RuntimeError("'station' is a required keyword for 'mode=w'")
             
         # For read mode, we do not create a new file.  Raise an error if it
@@ -430,6 +430,8 @@ class OrvilleImageDB(object):
         if entry_header.sync_word != 0xC0DECAFE:
             raise RuntimeError("Database corrupted")
         info = {}
+        for key in ('stokes_params', 'pixel_size'):
+            info[key] = getattr(self.header, key, None)
         for key in ('start_time', 'int_len', 'fill', 'lst', 'start_freq', 'stop_freq',
                     'bandwidth', 'center_ra', 'center_dec', 'center_az', 'center_alt'):
             info[key] = getattr(entry_header, key, None)
@@ -513,7 +515,7 @@ class OrvilleImageDB(object):
         return self.read_image()
         
     def __iter__(self):
-        return self
+        yield self.read_image()
         
     def next(self):
         if self.curr_int >= self.nint:
