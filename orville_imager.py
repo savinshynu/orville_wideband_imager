@@ -1,21 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Python2 compatibility
-from __future__ import print_function, division
-try:
-    range = xrange
-except NameError:
-    pass
-    
 import os
 import sys
 import copy
 import json
 import time
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 import ephem
 import numpy
 import ctypes
@@ -1267,11 +1257,7 @@ class UploaderOp(object):
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      shell=True)
                 output, error = p.communicate()
-                try:
-                    output = output.decode()
-                except AttributeError:
-                    # Python2 catch
-                    pass
+                output = output.decode()
                 mjd = os.path.basename(output.split('\n')[0])
             except subprocess.CalledProcessError:
                 mjd = '*'
@@ -1284,11 +1270,7 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
-                try:
-                    output = output.decode()
-                except AttributeError:
-                    # Python2 catch
-                    pass
+                output = output.decode()
                 latest_spectra = output.split('\n')[0]
                 shutil.copy2(latest_spectra, '/tmp/orville_spec.png')
             except (subprocess.CalledProcessError, OSError, IOError):
@@ -1300,11 +1282,7 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
-                try:
-                    output = output.decode()
-                except AttributeError:
-                    # Python2 catch
-                    pass
+                output = output.decode()
                 latest_uvdist = output.split('\n')[0]
                 shutil.copy2(latest_uvdist, '/tmp/orville_uvdist.png')
             except (subprocess.CalledProcessError, OSError, IOError):
@@ -1316,11 +1294,7 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
-                try:
-                    output = output.decode()
-                except AttributeError:
-                    # Python2 catch
-                    pass
+                output = output.decode()
                 latest_lwatv = output.split('\n')[0]
                 #shutil.copy2(latest_lwatv, '/tmp/lwatv.png')
                 shutil.copy2(latest_lwatv, '/tmp/orville_lwatv.png')
