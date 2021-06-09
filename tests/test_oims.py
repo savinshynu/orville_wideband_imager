@@ -89,8 +89,7 @@ class oims_tests(unittest.TestCase):
         ## File header
         for attr in ('imager_version', 'station', 'stokes_params', 'ngrid', 'nchan', 'flags'):
             self.assertEqual(getattr(db0.header, attr, None), getattr(db1.header, attr, None))
-        for attr in ('pixel_size', 'start_time',):
-            # TODO: What's up with stop_time?
+        for attr in ('pixel_size', 'start_time', 'stop_time'):
             self.assertAlmostEqual(getattr(db0.header, attr, None), getattr(db1.header, attr, None), 6)
         ## First image
         ### Image header
