@@ -517,7 +517,10 @@ class OrvilleImageDB(object):
         return self.read_image()
         
     def __iter__(self):
-        yield self.read_image()
+        return self
+        
+    def __next__(self):
+        return self.next()
         
     def next(self):
         if self.curr_int >= self.nint:
