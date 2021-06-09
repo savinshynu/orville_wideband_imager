@@ -88,7 +88,6 @@ class oims_tests(unittest.TestCase):
         # Validate
         ## File header
         for attr in ('imager_version', 'station', 'stokes_params', 'ngrid', 'nchan', 'flags'):
-            print('0:', getattr(db0.header, attr, None))
             self.assertEqual(getattr(db0.header, attr, None), getattr(db1.header, attr, None))
         for attr in ('pixel_size', 'start_time',):
             # TODO: What's up with stop_time?
