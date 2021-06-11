@@ -228,8 +228,14 @@ class OrvilleImageDB(object):
             # (e.g., resolution) that isn't yet available.
             self.version = self._FORMAT_VERSION
             self.header = self._FileHeader()
-            self.header.imager_version = imager_version
-            self.header.station = station
+            try:
+                self.header.imager_version = imager_version.encode()
+            except AttributeError:
+                self.header.imager_version = imager_version
+            try:
+                self.header.station = station.encode()
+            except AttributeError:
+                self.header.station = station
             self.header.flags = self.FLAG_SORTED     # Sorted until it's not
             self.nint = 0
             
