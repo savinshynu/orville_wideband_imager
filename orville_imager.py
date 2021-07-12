@@ -1,13 +1,11 @@
-#!/usr/bin/env python
-
-from __future__ import print_function, division
+#!/usr/bin/env python3
 
 import os
 import sys
 import copy
 import json
 import time
-import Queue
+import queue
 import ephem
 import numpy
 import ctypes
@@ -119,7 +117,7 @@ def timetag_to_mjdatetime(time_tag):
 class MultiQueue(object):
     def __init__(self, slots, maxsize=0):
         self._lock = threading.RLock()
-        self._slots = [Queue.Queue(maxsize=maxsize) for i in range(slots)]
+        self._slots = [queue.Queue(maxsize=maxsize) for i in range(slots)]
         
     def empty(self):
         with self._lock:
@@ -164,7 +162,7 @@ class MultiQueue(object):
             slot.join()
 
 
-FILL_QUEUE = Queue.Queue(maxsize=4)
+FILL_QUEUE = queue.Queue(maxsize=4)
 
 
 def get_good_and_missing_rx():
@@ -210,7 +208,7 @@ class CaptureOp(object):
             'complex':  True,
             'nbit':     32}
         print("******** CFREQ:", hdr['cfreq'])
-        hdr_str = json.dumps(hdr)
+        hdr_str = json.dumps(hdr).encode()
         # TODO: Can't pad with NULL because returned as C-string
         #hdr_str = json.dumps(hdr).ljust(4096, '\0')
         #hdr_str = json.dumps(hdr).ljust(4096, ' ')
@@ -240,7 +238,7 @@ class CaptureOp(object):
                 
                 try:
                     FILL_QUEUE.put_nowait(fill_level)
-                except Queue.Full:
+                except queue.Full:
                     pass
                     
         del capture
@@ -284,14 +282,14 @@ class SpectraOp(object):
         font = PIL.ImageFont.load(os.path.join(BASE_PATH, 'fonts', 'helvB10.pil'))
         
         # Axes boxes
-        for i in xrange(width + 1):
+        for i in range(width + 1):
             draw.line([i * 65, 0, i * 65, height * 65], fill = '#000000')
-        for i in xrange(height + 1):
+        for i in range(height + 1):
             draw.line([(0, i * 65), (im.size[0], i * 65)], fill = '#000000')
             
         # Power as a function of frequency for all antennas
         x = numpy.arange(nchan) * 64 // nchan
-        for s in xrange(nstand):
+        for s in range(nstand):
             if s >= height * width:
                 break
             x0, y0 = (s % width) * 65 + 1, (s // width + 1) * 65
@@ -302,14 +300,14 @@ class SpectraOp(object):
             if status[2*s+0] != 33:
                 c = '#799CB4'
             y = ((54.0 / (maxval - minval)) * (specs[s,:,0] - minval)).clip(0, 54)
-            draw.line(zip(x0 + x, y0 - y), fill=c)
+            draw.line(list(zip(x0 + x, y0 - y)), fill=c)
             
             ## YY
             c = '#FF7F0E'
             if status[2*s+1] != 33:
                 c = '#FFC28C'
             y = ((54.0 / (maxval - minval)) * (specs[s,:,1] - minval)).clip(0, 54)
-            draw.line(zip(x0 + x, y0 - y), fill=c)
+            draw.line(list(zip(x0 + x, y0 - y)), fill=c)
             
         # Summary
         ySummary = height * 65 + 2
@@ -319,8 +317,8 @@ class SpectraOp(object):
         rangeStr = 'range shown: %.3f to %.3f dB' % (minval, maxval)
         draw.text((210, ySummary), rangeStr, font = font, fill = '#000000')
         x = im.size[0] + 15
-        for label, c in reversed(zip(('good XX','good YY','flagged XX','flagged YY'),
-                                     ('#1F77B4','#FF7F0E','#799CB4',   '#FFC28C'))):
+        for label, c in reversed(list(zip(('good XX','good YY','flagged XX','flagged YY'),
+                                          ('#1F77B4','#FF7F0E','#799CB4',   '#FFC28C')))):
             x -= draw.textsize(label, font = font)[0] + 20
             draw.text((x, ySummary), label, font = font, fill = c)
             
@@ -358,7 +356,7 @@ class SpectraOp(object):
             
             # Setup the arrays for the frequencies and auto-correlations
             freq = chan0*fC + numpy.arange(nchan)*4*fC
-            autos = [i*(2*(nstand-1)+1-i)//2 + i for i in xrange(nstand)]
+            autos = [i*(2*(nstand-1)+1-i)//2 + i for i in range(nstand)]
             
             intCount = 0
             prev_time = time.time()
@@ -450,9 +448,9 @@ class BaselineOp(object):
         font = PIL.ImageFont.load(os.path.join(BASE_PATH, 'fonts', 'helvB10.pil'))
         
         # Axes boxes
-        for i in xrange(width + 1):
+        for i in range(width + 1):
             draw.line([i * 500, 0, i * 500, height * 300], fill = '#000000')
-        for i in xrange(height + 1):
+        for i in range(height + 1):
             draw.line([(0, i * 300), (im.size[0], i * 300)], fill = '#000000')
             
         # Visiblity amplitudes as a function of (u,v) distance
@@ -467,11 +465,11 @@ class BaselineOp(object):
             
             ## XX
             y = ((299.0 / (maxval - minval)) * (baselines[valid,c,0] - minval)).clip(0, 299)
-            draw.point(zip(x0 + x, y0 - y), fill='#1F77B4')
+            draw.point(list(zip(x0 + x, y0 - y)), fill='#1F77B4')
             
             ## YY
             y = ((299.0 / (maxval - minval)) * (baselines[valid,c,2] - minval)).clip(0, 299)
-            draw.point(zip(x0 + x, y0 - y), fill='#FF7F0E')
+            draw.point(list(zip(x0 + x, y0 - y)), fill='#FF7F0E')
             
             ### XY
             #y = ((299.0 / (maxval - minval)) * (baselines[valid,c,1] - minval)).clip(0, 299)
@@ -485,8 +483,8 @@ class BaselineOp(object):
         rangeStr = 'range shown: %.6f - %.6f' % (minval, maxval)
         draw.text((210, ySummary), rangeStr, font = font, fill = '#000000')
         x = im.size[0] + 15
-        #for label, c in reversed(zip(('XX','XY','YY'), ('#1F77B4','#A00000','#FF7F0E'))):
-        for label, c in reversed(zip(('XX','YY'), ('#1F77B4','#FF7F0E'))):
+        #for label, c in reversed(list(zip(('XX','XY','YY'), ('#1F77B4','#A00000','#FF7F0E')))):
+        for label, c in reversed(list(zip(('XX','YY'), ('#1F77B4','#FF7F0E')))):
             x -= draw.textsize(label, font = font)[0] + 20
             draw.text((x, ySummary), label, font = font, fill = c)
             
@@ -704,8 +702,8 @@ class ImagingOp(object):
                                               freq=freq, site=self.station.get_observer(), include_auto=True).transpose(1,2,0)
                     uvwT.shape += (1,1)
                     k = 0
-                    for i in xrange(nstand):
-                        for j in xrange(i, nstand):
+                    for i in range(nstand):
+                        for j in range(i, nstand):
                             uvw[:,:,i,j,:,:] = -uvwT[:,:,k]
                             uvw[:,:,j,i,:,:] =  uvwT[:,:,k]
                             k += 1
@@ -724,7 +722,7 @@ class ImagingOp(object):
                     print('phase cache failed')
                     phases = numpy.zeros((nchan,nstand*(nstand+1)//2,npol,npol), dtype=numpy.complex64)
                     k = 0
-                    for i in xrange(nstand):
+                    for i in range(nstand):
                         ## X
                         a = ANTENNAS[2*i + 0]
                         delayX0 = a.cable.delay(freq) - numpy.dot(phase_center, [a.stand.x, a.stand.y, a.stand.z]) / speedOfLight
@@ -740,7 +738,7 @@ class ImagingOp(object):
                             cgainX0 *= 0.0
                             cgainY0 *= 0.0
                             
-                        for j in xrange(i, nstand):
+                        for j in range(i, nstand):
                             ## X
                             a = ANTENNAS[2*j + 0]
                             delayX1 = a.cable.delay(freq) - numpy.dot(phase_center, [a.stand.x, a.stand.y, a.stand.z]) / speedOfLight
@@ -773,14 +771,14 @@ class ImagingOp(object):
                 
                 t0 = time.time()
                 weights = numpy.ones((nchan,nstand,nstand,npol,npol), dtype=numpy.complex64)
-                for i in xrange(nstand):
+                for i in range(nstand):
                     # Mask out bad antennas
                     if ANTENNAS[2*i+0].combined_status != 33 or ANTENNAS[2*i+1].combined_status != 33:
                         weights[:,i,:,:,:] = 0.0
                     if ANTENNAS[2*i+0].combined_status != 33 or ANTENNAS[2*i+1].combined_status != 33:
                         weights[:,:,i,:,:] = 0.0
                         
-                    for j in xrange(nstand):
+                    for j in range(nstand):
                         if i == j or i == (nstand-1) or j == (nstand-1):
                              weights[:,i,j,:,:] = 0.0
                         
@@ -929,7 +927,7 @@ class WriterOp(object):
             fill = FILL_QUEUE.get_nowait()
             self.log.debug("Fill level is %.1f%%", 100.0*fill)
             FILL_QUEUE.task_done()
-        except Queue.Empty:
+        except queue.Empty:
             fill = 0.0
             
         # Get the date
@@ -974,7 +972,7 @@ class WriterOp(object):
             fill = FILL_QUEUE.get_nowait()
             self.log.debug("Fill level is %.1f%%", 100.0*fill)
             FILL_QUEUE.task_done()
-        except Queue.Empty:
+        except queue.Empty:
             fill = 0.0
             
         # Get the date
@@ -1030,7 +1028,7 @@ class WriterOp(object):
         ## Create
         fig = plt.Figure(figsize=(5*2, 5*(400.3/390)),
                          facecolor='black')
-        ax = [fig.add_axes((i/2.0, 0, 1.0/2.0, 1.005), facecolor='black') for i in xrange(2)]
+        ax = [fig.add_axes((i/2.0, 0, 1.0/2.0, 1.005), facecolor='black') for i in range(2)]
         ax[0].set_axis_off()
         ax[1].set_axis_off()
         ## Logo-ize
@@ -1050,7 +1048,7 @@ class WriterOp(object):
         
         # Setup the Galactic plane
         gplane = []
-        for i in xrange(360):
+        for i in range(360):
             gal = ephem.Galactic(str(i), '0', epoch=ephem.J2000)
             ra, dec = gal.to_radec()
             bdy = ephem.FixedBody()
@@ -1089,8 +1087,7 @@ class WriterOp(object):
             arc_freq = arc_freq.mean(axis=1)
             
             # Setup the frequencies to write images for
-            ichans = range(nchan//2//6, nchan, nchan//6)
-            ichans = [ichans[2],]   ## Only make one image at the center of the band
+            ichans = [nchan//2,]   ## Only make one image at the center of the band
             
             # Setup the buffer for the automatic color scale control
             vmax = [deque([], maxlen=60) for c in freq]
@@ -1259,6 +1256,7 @@ class UploaderOp(object):
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      shell=True)
                 output, error = p.communicate()
+                output = output.decode()
                 mjd = os.path.basename(output.split('\n')[0])
             except subprocess.CalledProcessError:
                 mjd = '*'
@@ -1271,6 +1269,7 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
+                output = output.decode()
                 latest_spectra = output.split('\n')[0]
                 shutil.copy2(latest_spectra, '/tmp/orville_spec.png')
             except (subprocess.CalledProcessError, OSError, IOError):
@@ -1282,6 +1281,7 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
+                output = output.decode()
                 latest_uvdist = output.split('\n')[0]
                 shutil.copy2(latest_uvdist, '/tmp/orville_uvdist.png')
             except (subprocess.CalledProcessError, OSError, IOError):
@@ -1293,6 +1293,7 @@ class UploaderOp(object):
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
+                output = output.decode()
                 latest_lwatv = output.split('\n')[0]
                 #shutil.copy2(latest_lwatv, '/tmp/lwatv.png')
                 shutil.copy2(latest_lwatv, '/tmp/orville_lwatv.png')

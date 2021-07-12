@@ -1,7 +1,8 @@
 from __future__ import print_function, division, absolute_import
-import sys
-if sys.version_info > (3,):
-    xrange = range
+try:
+    range = xrange
+except NameError:
+    pass
     
 import os
 import numpy
@@ -132,7 +133,7 @@ class OrvilleImageDB(object):
         self._TIME_OFFSET = self._TIME_OFFSET_v2
         
         # 'station' is a required keyword
-        if mode[0] == 'w' and station == '':
+        if mode[0] == 'w' and (station == '' or station == b''):
             raise RuntimeError("'station' is a required keyword for 'mode=w'")
             
         # For read mode, we do not create a new file.  Raise an error if it
@@ -175,7 +176,11 @@ class OrvilleImageDB(object):
         self._is_outdated = False
         
         if not self._is_new:
-            self.version = self.file.read(24).rstrip('\x00')
+            self.version = self.file.read(24).rstrip(b'\x00')
+            try:
+                self.version = self.version.decode()
+            except AttributeError:
+                pass
             if self.version != self._FORMAT_VERSION:
                 if self.version == 'OrvilleImageDBv001':
                     self._FileHeader = self._FileHeader_v1
@@ -200,7 +205,7 @@ class OrvilleImageDB(object):
                 # It looks like we should have a good header, at least ....
                 self.header = self._FileHeader()
                 self.file.readinto(self.header)
-                self.nstokes = len(self.header.stokes_params.split(','))
+                self.nstokes = len(self.header.stokes_params.split(b','))
                 
                 entry_header = self._EntryHeader()
                 int_size = ctypes.sizeof(entry_header) \
@@ -223,6 +228,14 @@ class OrvilleImageDB(object):
             # (e.g., resolution) that isn't yet available.
             self.version = self._FORMAT_VERSION
             self.header = self._FileHeader()
+            try:
+                self.header.imager_version = imager_version.encode()
+            except AttributeError:
+                self.header.imager_version = imager_version
+            try:
+                self.header.station = station.encode()
+            except AttributeError:
+                self.header.station = station
             self.header.flags = self.FLAG_SORTED     # Sorted until it's not
             self.nint = 0
             
@@ -279,6 +292,10 @@ class OrvilleImageDB(object):
         
         if type(stokes_params) is list:
             stokes_params = ','.join(stokes_params)
+        try:
+            stokes_params = stokes_params.encode()
+        except AttributeError:
+            pass
             
         if self._is_new:
             # If this is the file's first image, fill in values of the file
@@ -287,9 +304,12 @@ class OrvilleImageDB(object):
             self.header.ngrid         = ngrid
             self.header.pixel_size    = pixel_size
             self.header.nchan         = nchan
-            self.file.write(struct.pack('<24s', self.version))
+            try:
+                self.file.write(struct.pack('<24s', self.version.encode()))
+            except AttributeError:
+                self.file.write(struct.pack('<24s', self.version))
             self.file.write(self.header)
-            self.nstokes = len(self.header.stokes_params.split(','))
+            self.nstokes = len(self.header.stokes_params.split(b','))
             self._is_new = False
             
         else:
@@ -418,6 +438,8 @@ class OrvilleImageDB(object):
         if entry_header.sync_word != 0xC0DECAFE:
             raise RuntimeError("Database corrupted")
         info = {}
+        for key in ('stokes_params', 'pixel_size'):
+            info[key] = getattr(self.header, key, None)
         for key in ('start_time', 'int_len', 'fill', 'lst', 'start_freq', 'stop_freq',
                     'bandwidth', 'center_ra', 'center_dec', 'center_az', 'center_alt'):
             info[key] = getattr(entry_header, key, None)
@@ -457,8 +479,8 @@ class OrvilleImageDB(object):
         # Determine the sort order of those times.
         times = numpy.array([
                 struct.unpack_from('<d', data, offset=i)[0] for i in
-                xrange(inDB._TIME_OFFSET,
-                       int_size * inDB.nint, int_size)])
+                range(inDB._TIME_OFFSET,
+                      int_size * inDB.nint, int_size)])
         
         intOrder = times.argsort()
         
@@ -476,7 +498,7 @@ class OrvilleImageDB(object):
             outFile.flush()
             
             outEntryHeaderStruct = inDB._EntryHeader()
-            for iOut in xrange(inDB.nint):
+            for iOut in range(inDB.nint):
                 i = intOrder[iOut] * int_size
                 entry_header = data[i:i+headerSize]
                 entry_data = data[i+headerSize:i+int_size]
@@ -502,6 +524,9 @@ class OrvilleImageDB(object):
         
     def __iter__(self):
         return self
+        
+    def __next__(self):
+        return self.next()
         
     def next(self):
         if self.curr_int >= self.nint:

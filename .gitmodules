@@ -1,0 +1,4 @@
+[submodule "bifrost"]
+	path = bifrost
+	url = https://github.com/jaycedowell/bifrost.git
+	branch = wideband-imager
