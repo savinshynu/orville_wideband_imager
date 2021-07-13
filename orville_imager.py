@@ -1271,7 +1271,7 @@ class UploaderOp(object):
                 output, error = p.communicate()
                 output = output.decode()
                 latest_spectra = output.split('\n')[0]
-                shutil.copy2(latest_spectra, '/tmp/orville_spec.png')
+                shutil.copy2(latest_spectra, '/tmp/lwatv_spec.png')
             except (subprocess.CalledProcessError, OSError, IOError):
                 pass
                 
@@ -1283,28 +1283,26 @@ class UploaderOp(object):
                 output, error = p.communicate()
                 output = output.decode()
                 latest_uvdist = output.split('\n')[0]
-                shutil.copy2(latest_uvdist, '/tmp/orville_uvdist.png')
+                shutil.copy2(latest_uvdist, '/tmp/lwatv_uvdist.png')
             except (subprocess.CalledProcessError, OSError, IOError):
                 pass
                 
-            ## LWATV image at one frequency
+            ## LWATV image
             try:
-                p = subprocess.Popen('ls -t %s/%s/*_%02i*.png | head -n12 | sort -t_ -k3 | head -n1' % (self.output_dir_lwatv, mjd, utc_hour),
+                p = subprocess.Popen('ls -t %s/%s/*_%02i*.png | head -n1' % (self.output_dir_lwatv, mjd, utc_hour),
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
                 output, error = p.communicate()
                 output = output.decode()
                 latest_lwatv = output.split('\n')[0]
-                #shutil.copy2(latest_lwatv, '/tmp/lwatv.png')
-                shutil.copy2(latest_lwatv, '/tmp/orville_lwatv.png')
+                shutil.copy2(latest_lwatv, '/tmp/lwatv.png')
             except (subprocess.CalledProcessError, OSError, IOError) as e:
                 pass
                 
             # Upload and make active
             try:
                 ## Stage
-                #p = subprocess.Popen('rsync -e ssh -av /tmp/orville_*.png /tmp/lwatv.png \
-                p = subprocess.Popen('rsync -e ssh -av /tmp/orville_*.png \
+                p = subprocess.Popen('rsync -e ssh -av /tmp/lwatv*.png \
                                         mcsdr@lwalab.phys.unm.edu:/var/www/lwatv2/incoming/',
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     shell=True)
