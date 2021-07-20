@@ -27,8 +27,41 @@ import OrvilleImageDB
 
 db = OrvilleImageDB.OrvilleImageDB(oimsFile, 'r')
 
+#getting parameters from the input file
+
+ints = db.nint #number of integration
+station =  db.header.station #Station info
+stokes = db.header.stokes_params #Stokes parameter info
+inp_flag = db.header.flags # Flag info
+file_start = db.header.start_time # File start time
+file_end = db.header.stop_time   # File end time
+ngrid = db.header.ngrid #size of images (x-axis)
+psize = db.header.pixel_size #angular size of a pixel (at zenith)
+nchan = db.header.nchan # number of channels
+
+# Collecting header and data from the whole file
+
 for i,(hdr,data) in enumerate(db):
     print(i, hdr)
+
+# Below will give more info on the headers and data array
+# Collecting data and header from a particular image integration (Usually 720 integrations (each 5 seconds) in an hour) 
+
+hdr, dat = db.__getitem__(710) # collecting header and data from the 710 th integration
+t = hdr['start_time'] # starting time in MJD
+int_len = hdr['int_len'] # Length of each integration
+lst = hdr['lst'] # Starting LST time of observation
+start_freq = hdr['start_freq']/1e+6 # Starting Frequency in MHz
+stop_freq = hdr['stop_freq']/1e+6  # Stopping Frequency in MHz
+bandwidth = hdr['bandwidth']/1e+6 # Bandwidth of the observation
+cent_ra = hdr['center_ra'] # Phase center RA
+cent_dec = hdr['center_dec'] # Phase center Dec
+cent_az = hdr['center_az']   # Phase center coordinates, Azimuth, Ideally towards zenith, changed due to W-Projection 
+cent_alt = hdr['center_alt'] # Phase center coordinates, Elevation, Ideally towards zenith, changed due to W-Projection 
+
+# dat array contains the image data in a four dimensional array of the form [nchan,stokes,xgrid,ygrid]
+# where nchan = 198 frequency channels, stokes = 4 [stokes (I, Q, U,V)], xgrid = grid size in x direction, ygrid = grid size in y direction and mostly xgrid = ygrid = ngrid
+# Copy over to numpy arrays for further processing such as image subtraction and transient searches.
 
 db.close()
 ```
