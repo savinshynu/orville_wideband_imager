@@ -2,6 +2,8 @@
 
 [![Paper](https://img.shields.io/badge/lwa%20memo-215-blue)](http://leo.phys.unm.edu/~lwa/memos/memo/lwa0215.pdf)
 
+
+## Description
 The Orville Wideband Imager is a realtime GPU-based all-sky imager for the output
 of the ADP broadband correlator that runs at LWA-SV.  Orville receives visibility
 data from ADP for 32,896 baselines, images the data, and writes the images to the
